@@ -12,6 +12,7 @@ export interface SubItem {
   category_id: string
   title: string
   detail: string
+  light: Light
   created_at: string
 }
 

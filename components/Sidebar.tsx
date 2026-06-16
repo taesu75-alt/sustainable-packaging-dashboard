@@ -17,6 +17,10 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
   const [rep,     setRep]     = useState('')
   const [busy,    setBusy]    = useState(false)
 
+  const [searchCompany, setSearchCompany] = useState('')
+  const [searchProduct, setSearchProduct] = useState('')
+  const [searchRep,     setSearchRep]     = useState('')
+
   async function handleRegister() {
     if (!company.trim() || !product.trim() || !rep.trim()) {
       alert('고객사, 대상제품, 영업담당자를 모두 입력해 주세요.')
@@ -28,9 +32,16 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
     setBusy(false)
   }
 
-  const totalCount = leads.length
-  const greenCount = leads.filter(l => l.lead_categories?.some(c => c.light === 'green')).length
-  const redCount   = leads.filter(l => l.lead_categories?.some(c => c.light === 'red')).length
+  const filtered = leads.filter(l => {
+    const sc = searchCompany.trim().toLowerCase()
+    const sp = searchProduct.trim().toLowerCase()
+    const sr = searchRep.trim().toLowerCase()
+    return (
+      (!sc || l.company.toLowerCase().includes(sc)) &&
+      (!sp || l.product.toLowerCase().includes(sp)) &&
+      (!sr || l.rep.toLowerCase().includes(sr))
+    )
+  })
 
   return (
     <aside style={S.sidebar}>
@@ -40,16 +51,9 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
         <div style={{ fontSize: 12, color: '#7a8aa0', marginTop: 3 }}>Lead Management Dashboard</div>
       </div>
 
-      {/* Stats */}
-      <div style={S.statsRow}>
-        <StatBox num={totalCount} label="전체 리드" />
-        <StatBox num={greenCount} label="진행(초록)" color="#43a047" />
-        <StatBox num={redCount}   label="이슈(빨강)" color="#e53935" />
-      </div>
-
       {/* Register */}
-      <div style={S.registerArea}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#a0afbf', marginBottom: 12 }}>신규 리드 등록</div>
+      <div style={S.section}>
+        <div style={S.sectionTitle}>신규 리드 등록</div>
         <input style={S.inp} value={company} onChange={e => setCompany(e.target.value)} placeholder="고객사명" />
         <input style={S.inp} value={product} onChange={e => setProduct(e.target.value)} placeholder="대상 제품" />
         <input style={S.inp} value={rep}     onChange={e => setRep(e.target.value)}     placeholder="영업담당자"
@@ -59,17 +63,22 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
         </button>
       </div>
 
+      {/* Search */}
+      <div style={S.section}>
+        <div style={S.sectionTitle}>리드 검색</div>
+        <input style={S.inp} value={searchCompany} onChange={e => setSearchCompany(e.target.value)} placeholder="고객사명" />
+        <input style={S.inp} value={searchProduct} onChange={e => setSearchProduct(e.target.value)} placeholder="대상 제품" />
+        <input style={{ ...S.inp, marginBottom: 0 }} value={searchRep} onChange={e => setSearchRep(e.target.value)} placeholder="영업담당자" />
+      </div>
+
       {/* List */}
       <div style={S.list}>
         {loading && <div style={S.hint}>불러오는 중...</div>}
-        {!loading && leads.length === 0 && <div style={S.hint}>등록된 리드가 없습니다.</div>}
-        {leads.map(l => (
+        {!loading && filtered.length === 0 && <div style={S.hint}>리드가 없습니다.</div>}
+        {filtered.map(l => (
           <div
             key={l.id}
-            style={{
-              ...S.leadItem,
-              ...(l.id === activeId ? S.leadItemActive : {}),
-            }}
+            style={{ ...S.leadItem, ...(l.id === activeId ? S.leadItemActive : {}) }}
             onClick={() => onSelect(l.id)}
           >
             <div style={{ fontSize: 14, color: '#e0e8f0', fontWeight: 600 }}>{l.company}</div>
@@ -90,23 +99,14 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
   )
 }
 
-function StatBox({ num, label, color }: { num: number; label: string; color?: string }) {
-  return (
-    <div style={{ flex: 1, background: '#242f45', borderRadius: 8, padding: 10, textAlign: 'center' }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color: color ?? '#fff' }}>{num}</div>
-      <div style={{ fontSize: 11, color: '#7a8aa0', marginTop: 2 }}>{label}</div>
-    </div>
-  )
-}
-
 const S: Record<string, React.CSSProperties> = {
   sidebar: {
     width: 300, minWidth: 300, background: '#1a2236', color: '#cdd5e0',
     display: 'flex', flexDirection: 'column', overflow: 'hidden',
   },
   sidebarHeader: { padding: '22px 20px 16px', borderBottom: '1px solid #2d3a50' },
-  statsRow: { padding: '16px 20px', borderBottom: '1px solid #2d3a50', display: 'flex', gap: 10 },
-  registerArea: { padding: '16px 20px', borderBottom: '1px solid #2d3a50' },
+  section: { padding: '14px 20px', borderBottom: '1px solid #2d3a50' },
+  sectionTitle: { fontSize: 13, fontWeight: 600, color: '#a0afbf', marginBottom: 10 },
   inp: {
     width: '100%', padding: '8px 10px', marginBottom: 8,
     background: '#242f45', border: '1px solid #3a4a60', borderRadius: 6,

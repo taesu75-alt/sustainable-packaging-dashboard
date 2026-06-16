@@ -1,7 +1,7 @@
 'use client'
-import { useRef, useState } from 'react'
-import type { Category, SubItem } from '@/lib/supabase'
-import { LIGHT_DOT, LIGHT_LABEL, nextLight } from './utils'
+import { useState } from 'react'
+import type { Category, SubItem, Light } from '@/lib/supabase'
+import { LIGHT_DOT, LIGHT_LABEL, LIGHTS, deriveLight } from './utils'
 
 interface Props {
   category: Category
@@ -11,16 +11,18 @@ interface Props {
 export default function CategoryCard({ category, onUpdate }: Props) {
   const [addTitle, setAddTitle] = useState('')
   const [busy, setBusy] = useState(false)
-  const detailRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
 
-  async function toggleLight() {
-    const newLight = nextLight(category.light)
-    const res = await fetch(`/api/categories/${category.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ light: newLight }),
-    })
-    if (res.ok) onUpdate({ ...category, light: newLight })
+  const derivedLight = deriveLight(category.sub_items)
+
+  async function syncCategoryLight(items: SubItem[]) {
+    const light = deriveLight(items)
+    if (light !== category.light) {
+      await fetch(`/api/categories/${category.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ light }),
+      })
+    }
   }
 
   async function addItem() {
@@ -34,57 +36,52 @@ export default function CategoryCard({ category, onUpdate }: Props) {
     })
     if (res.ok) {
       const item: SubItem = await res.json()
-      onUpdate({ ...category, sub_items: [...category.sub_items, item] })
+      const newItems = [...category.sub_items, item]
+      onUpdate({ ...category, sub_items: newItems, light: deriveLight(newItems) })
       setAddTitle('')
+      syncCategoryLight(newItems)
     }
     setBusy(false)
   }
 
   async function deleteItem(itemId: string) {
     await fetch(`/api/items/${itemId}`, { method: 'DELETE' })
-    onUpdate({ ...category, sub_items: category.sub_items.filter(i => i.id !== itemId) })
+    const newItems = category.sub_items.filter(i => i.id !== itemId)
+    onUpdate({ ...category, sub_items: newItems, light: deriveLight(newItems) })
+    syncCategoryLight(newItems)
   }
 
-  async function updateDetail(itemId: string, detail: string) {
-    onUpdate({
-      ...category,
-      sub_items: category.sub_items.map(i => i.id === itemId ? { ...i, detail } : i),
-    })
+  async function updateItemLight(itemId: string, light: Light) {
     await fetch(`/api/items/${itemId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ detail }),
+      body: JSON.stringify({ light }),
     })
+    const newItems = category.sub_items.map(i => i.id === itemId ? { ...i, light } : i)
+    onUpdate({ ...category, sub_items: newItems, light: deriveLight(newItems) })
+    syncCategoryLight(newItems)
   }
-
-  const dot = LIGHT_DOT[category.light]
-  const lbl = LIGHT_LABEL[category.light]
 
   return (
     <div style={S.card}>
-      {/* Header — click to toggle light */}
-      <div style={S.header} onClick={toggleLight} title="클릭하여 상태 변경">
-        <span style={{ ...S.dot, background: dot }} />
+      {/* Header — 파생된 신호등 표시 (클릭 불가) */}
+      <div style={S.header}>
+        <span style={{ ...S.dot, background: LIGHT_DOT[derivedLight] }} />
         <span style={S.title}>{category.name}</span>
-        <span style={S.hint}>{lbl}</span>
+        <span style={S.hint}>{LIGHT_LABEL[derivedLight]}</span>
       </div>
 
       {/* Body */}
       <div style={S.body}>
         {category.sub_items.length === 0
-          ? <div style={S.empty}>세부 항목이 없습니다.</div>
+          ? <div style={S.empty}>세부 항목을 추가하세요.</div>
           : category.sub_items.map(item => (
-              <div key={item.id} style={S.subItem}>
-                <span style={S.subTitle}>{item.title}</span>
-                <textarea
-                  ref={el => { detailRefs.current[item.id] = el }}
-                  defaultValue={item.detail}
-                  placeholder="세부 내용..."
-                  style={S.textarea}
-                  onBlur={e => updateDetail(item.id, e.target.value)}
-                />
-                <button style={S.delBtn} onClick={() => deleteItem(item.id)} title="삭제">×</button>
-              </div>
+              <SubItemRow
+                key={item.id}
+                item={item}
+                onLightChange={updateItemLight}
+                onDelete={deleteItem}
+              />
             ))
         }
 
@@ -104,25 +101,89 @@ export default function CategoryCard({ category, onUpdate }: Props) {
   )
 }
 
+function SubItemRow({
+  item,
+  onLightChange,
+  onDelete,
+}: {
+  item: SubItem
+  onLightChange: (id: string, light: Light) => void
+  onDelete: (id: string) => void
+}) {
+  const [detail, setDetail] = useState(item.detail)
+  const [saving, setSaving] = useState(false)
+  const [saved,  setSaved]  = useState(false)
+
+  async function save() {
+    setSaving(true)
+    await fetch(`/api/items/${item.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ detail }),
+    })
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1500)
+  }
+
+  return (
+    <div style={SR.wrap}>
+      {/* 항목명 + 신호등 선택 */}
+      <div style={SR.top}>
+        <span style={SR.title}>{item.title}</span>
+        <div style={SR.lights}>
+          {LIGHTS.map(l => (
+            <button
+              key={l}
+              title={LIGHT_LABEL[l]}
+              onClick={() => onLightChange(item.id, l)}
+              style={{
+                ...SR.lightBtn,
+                background: LIGHT_DOT[l],
+                opacity: item.light === l ? 1 : 0.25,
+                transform: item.light === l ? 'scale(1.3)' : 'scale(1)',
+              }}
+            />
+          ))}
+        </div>
+        <button style={SR.delBtn} onClick={() => onDelete(item.id)} title="삭제">×</button>
+      </div>
+
+      {/* 세부내용 + 저장 */}
+      <div style={SR.detailRow}>
+        <textarea
+          value={detail}
+          onChange={e => setDetail(e.target.value)}
+          placeholder="세부 내용을 입력하세요..."
+          style={SR.textarea}
+          rows={2}
+        />
+        <button
+          onClick={save}
+          disabled={saving}
+          style={{
+            ...SR.saveBtn,
+            background: saved ? '#43a047' : '#2563eb',
+          }}
+        >
+          {saving ? '...' : saved ? '완료' : '저장'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const S: Record<string, React.CSSProperties> = {
   card: { background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,.07)', overflow: 'hidden' },
   header: {
     display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px',
-    borderBottom: '1px solid #f0f0f0', cursor: 'pointer', userSelect: 'none',
+    borderBottom: '1px solid #f0f0f0',
   },
-  dot: { width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: '2px solid rgba(0,0,0,.08)', transition: 'background .2s' },
+  dot: { width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: '2px solid rgba(0,0,0,.08)', transition: 'background .3s' },
   title: { fontSize: 15, fontWeight: 700, flex: 1 },
   hint: { fontSize: 10, color: '#bbb' },
   body: { padding: '12px 16px' },
   empty: { color: '#bbb', fontSize: 13, textAlign: 'center', padding: '12px 0' },
-  subItem: { display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '1px solid #f4f4f4' },
-  subTitle: { fontSize: 13, fontWeight: 600, color: '#333', minWidth: 70, paddingTop: 4 },
-  textarea: {
-    flex: 1, fontSize: 12, color: '#444', border: '1px solid #d0d8e8', borderRadius: 4,
-    padding: '4px 6px', resize: 'none' as const, minHeight: 36,
-    fontFamily: 'inherit', outline: 'none',
-  },
-  delBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 },
   addRow: { display: 'flex', gap: 8, marginTop: 10 },
   addInp: {
     flex: 1, padding: '6px 9px', border: '1px dashed #c0d0e0', borderRadius: 5,
@@ -131,5 +192,30 @@ const S: Record<string, React.CSSProperties> = {
   addBtn: {
     padding: '6px 10px', background: '#e8f0fe', border: 'none', borderRadius: 5,
     color: '#2563eb', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+  },
+}
+
+const SR: Record<string, React.CSSProperties> = {
+  wrap: {
+    borderBottom: '1px solid #f4f4f4', paddingBottom: 10, marginBottom: 10,
+  },
+  top: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 },
+  title: { fontSize: 13, fontWeight: 600, color: '#333', flex: 1 },
+  lights: { display: 'flex', gap: 5, alignItems: 'center' },
+  lightBtn: {
+    width: 14, height: 14, borderRadius: '50%', border: 'none', cursor: 'pointer',
+    padding: 0, transition: 'opacity .15s, transform .15s',
+  },
+  delBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 18, padding: '0 2px', lineHeight: 1 },
+  detailRow: { display: 'flex', gap: 8, alignItems: 'flex-end' },
+  textarea: {
+    flex: 1, fontSize: 12, color: '#444', border: '1px solid #d0d8e8', borderRadius: 4,
+    padding: '5px 7px', resize: 'none' as const,
+    fontFamily: 'inherit', outline: 'none',
+  },
+  saveBtn: {
+    padding: '6px 12px', border: 'none', borderRadius: 5,
+    color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+    whiteSpace: 'nowrap' as const, transition: 'background .3s',
   },
 }
