@@ -3,10 +3,12 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Lead } from '@/lib/supabase'
 import Sidebar from './Sidebar'
 import LeadSnapshot from './LeadSnapshot'
+import LeadList from './LeadList'
 
 export default function Dashboard() {
   const [leads, setLeads]       = useState<Lead[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [showHome, setShowHome] = useState(false)
   const [loading, setLoading]   = useState(true)
 
   const activeLead = leads.find(l => l.id === activeId) ?? null
@@ -35,7 +37,17 @@ export default function Dashboard() {
     if (!confirm('이 리드를 삭제하시겠습니까?')) return
     await fetch(`/api/leads/${id}`, { method: 'DELETE' })
     setLeads(prev => prev.filter(l => l.id !== id))
-    if (activeId === id) setActiveId(null)
+    if (activeId === id) { setActiveId(null); setShowHome(true) }
+  }
+
+  function handleHome() {
+    setActiveId(null)
+    setShowHome(true)
+  }
+
+  function handleSelect(id: string) {
+    setActiveId(id)
+    setShowHome(false)
   }
 
   function updateLeadLocally(updated: Lead) {
@@ -48,7 +60,8 @@ export default function Dashboard() {
         leads={leads}
         activeId={activeId}
         loading={loading}
-        onSelect={setActiveId}
+        onSelect={handleSelect}
+        onHome={handleHome}
         onRegister={registerLead}
       />
       <main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
@@ -58,6 +71,8 @@ export default function Dashboard() {
               onDelete={deleteLead}
               onUpdate={updateLeadLocally}
             />
+          : showHome
+          ? <LeadList leads={leads} onSelect={handleSelect} />
           : <Welcome />
         }
       </main>

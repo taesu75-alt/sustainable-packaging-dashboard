@@ -8,10 +8,11 @@ interface Props {
   activeId: string | null
   loading: boolean
   onSelect: (id: string) => void
+  onHome: () => void
   onRegister: (company: string, product: string, rep: string) => Promise<void>
 }
 
-export default function Sidebar({ leads, activeId, loading, onSelect, onRegister }: Props) {
+export default function Sidebar({ leads, activeId, loading, onSelect, onHome, onRegister }: Props) {
   const [company, setCompany] = useState('')
   const [product, setProduct] = useState('')
   const [rep,     setRep]     = useState('')
@@ -48,8 +49,15 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
   return (
     <aside style={S.sidebar}>
       {/* Header */}
-      <div style={S.sidebarHeader}>
-        <div style={{ fontSize: 17, color: '#fff', fontWeight: 700 }}>친환경 패키징 리드 대시보드</div>
+      <div
+        style={{ ...S.sidebarHeader, cursor: 'pointer' }}
+        onClick={onHome}
+        title="홈으로"
+      >
+        <div style={{ fontSize: 17, color: '#fff', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>🏠</span>
+          친환경 패키징 리드 대시보드
+        </div>
         <div style={{ fontSize: 12, color: '#7a8aa0', marginTop: 3 }}>Lead Management Dashboard</div>
       </div>
 
