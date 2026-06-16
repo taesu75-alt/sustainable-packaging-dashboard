@@ -3,6 +3,13 @@ import type { Lead, Category } from '@/lib/supabase'
 import { LIGHT_DOT, LIGHT_LABEL, deriveLight } from './utils'
 import CategoryCard from './CategoryCard'
 
+const STATUS_COLORS = {
+  gray:   '#e2e3f0',
+  red:    '#ef4444',
+  yellow: '#f59e0b',
+  green:  '#10b981',
+}
+
 interface Props {
   lead: Lead
   onDelete: (id: string) => void
@@ -17,52 +24,71 @@ export default function LeadSnapshot({ lead, onDelete, onUpdate }: Props) {
     })
   }
 
-  const date = new Date(lead.created_at).toLocaleDateString('ko-KR')
+  const date    = new Date(lead.created_at).toLocaleDateString('ko-KR')
+  const initial = lead.rep.charAt(0)
+  const cats    = lead.lead_categories ?? []
 
   return (
-    <div>
-      {/* ── Header ── */}
-      <div style={{ marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#1a2236', letterSpacing: '-0.5px' }}>
-            {lead.company}
-            <span style={{ color: '#94a3b8', fontWeight: 400, margin: '0 8px' }}>/</span>
-            {lead.product}
-          </h2>
+    <div style={{ maxWidth: 1200 }}>
+      {/* ── Page Header ── */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h2 style={{
+              fontFamily: "'Hanken Grotesk', sans-serif",
+              fontSize: 22, fontWeight: 800, color: '#1a2236', letterSpacing: '-0.02em',
+            }}>
+              {lead.company}
+              <span style={{ color: '#c6c6cd', fontWeight: 400, margin: '0 10px' }}>/</span>
+              <span style={{ color: '#45464d', fontWeight: 700 }}>{lead.product}</span>
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%', background: '#bec6e0',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, color: '#131b2f', flexShrink: 0,
+                }}>
+                  {initial}
+                </div>
+                <span style={{ fontSize: 13, color: '#334155', fontWeight: 500 }}>{lead.rep}</span>
+              </div>
+              <span style={{ color: '#c6c6cd' }}>·</span>
+              <span style={{ fontSize: 12, color: '#76777d' }}>등록일 {date}</span>
+            </div>
+          </div>
           <button
             onClick={() => onDelete(lead.id)}
             style={{
-              padding: '7px 16px', background: '#fff', border: '1px solid #e0e0e0',
-              borderRadius: 6, fontSize: 13, color: '#c0392b', cursor: 'pointer', flexShrink: 0,
+              padding: '8px 18px', background: '#fff', border: '1px solid #e2e3f0',
+              borderRadius: 8, fontSize: 13, color: '#ba1a1a', cursor: 'pointer',
+              fontWeight: 600, flexShrink: 0,
+              transition: 'background .12s',
             }}
           >
             삭제
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 13, color: '#64748b' }}>
-          <span>담당자: <strong style={{ color: '#334155' }}>{lead.rep}</strong></span>
-          <span>등록일: <strong style={{ color: '#334155' }}>{date}</strong></span>
-        </div>
       </div>
 
       {/* ── 전체 신호등 요약 ── */}
       <div style={{
-        display: 'flex', gap: 8, flexWrap: 'wrap',
-        background: '#fff', borderRadius: 12, padding: '14px 18px',
-        boxShadow: '0 1px 6px rgba(0,0,0,.07)', marginBottom: 20,
+        background: '#fff', borderRadius: 12, padding: '14px 20px',
+        boxShadow: '0px 1px 6px rgba(0,0,0,0.07)', border: '1px solid #e2e3f0',
+        marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 8,
       }}>
-        {lead.lead_categories.map(cat => {
+        {cats.map(cat => {
           const light = deriveLight(cat.sub_items)
-          const dot   = LIGHT_DOT[light]
           return (
             <div key={cat.id} style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 12px', borderRadius: 20,
-              background: '#f8fafc', border: '1px solid #e2e8f0',
+              padding: '5px 12px', borderRadius: 999,
+              border: `1px solid ${light !== 'gray' ? STATUS_COLORS[light] + '60' : '#e2e3f0'}`,
+              background: light !== 'gray' ? STATUS_COLORS[light] + '12' : '#f8fafc',
             }}>
               <span style={{
-                width: 12, height: 12, borderRadius: '50%',
-                background: dot, display: 'inline-block', flexShrink: 0,
+                width: 8, height: 8, borderRadius: '50%',
+                background: STATUS_COLORS[light], display: 'inline-block', flexShrink: 0,
               }} />
               <span style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>{cat.name}</span>
               <span style={{ fontSize: 11, color: '#94a3b8' }}>{LIGHT_LABEL[light]}</span>
@@ -73,7 +99,7 @@ export default function LeadSnapshot({ lead, onDelete, onUpdate }: Props) {
 
       {/* ── 4×2 Grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {lead.lead_categories.map(cat => (
+        {cats.map(cat => (
           <CategoryCard key={cat.id} category={cat} onUpdate={updateCategory} />
         ))}
       </div>

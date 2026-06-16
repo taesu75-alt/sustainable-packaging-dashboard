@@ -1,7 +1,28 @@
 'use client'
 import { useState } from 'react'
 import type { Category, SubItem, Light } from '@/lib/supabase'
-import { LIGHT_DOT, LIGHT_LABEL, LIGHTS, deriveLight } from './utils'
+import { LIGHT_LABEL, LIGHTS, deriveLight } from './utils'
+
+const STATUS_COLORS: Record<Light, string> = {
+  gray:   '#e2e3f0',
+  red:    '#ef4444',
+  yellow: '#f59e0b',
+  green:  '#10b981',
+}
+
+const STATUS_BG: Record<Light, string> = {
+  gray:   'transparent',
+  red:    '#fee2e2',
+  yellow: '#fef3c7',
+  green:  '#d1fae5',
+}
+
+const STATUS_TEXT: Record<Light, string> = {
+  gray:   '#76777d',
+  red:    '#991b1b',
+  yellow: '#92400e',
+  green:  '#065f46',
+}
 
 interface Props {
   category: Category
@@ -63,18 +84,44 @@ export default function CategoryCard({ category, onUpdate }: Props) {
   }
 
   return (
-    <div style={S.card}>
-      {/* Header — 파생된 신호등 표시 (클릭 불가) */}
-      <div style={S.header}>
-        <span style={{ ...S.dot, background: LIGHT_DOT[derivedLight] }} />
-        <span style={S.title}>{category.name}</span>
-        <span style={S.hint}>{LIGHT_LABEL[derivedLight]}</span>
+    <div style={{
+      background: '#fff', borderRadius: 12,
+      boxShadow: '0px 1px 6px rgba(0,0,0,0.07)', border: '1px solid #e2e3f0',
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '14px 18px', borderBottom: '1px solid #f0f0f0',
+      }}>
+        <span style={{
+          width: 12, height: 12, borderRadius: '50%', flexShrink: 0,
+          background: STATUS_COLORS[derivedLight],
+          border: `2px solid ${derivedLight === 'gray' ? '#d1d5db' : STATUS_COLORS[derivedLight]}`,
+          transition: 'background .3s',
+        }} />
+        <span style={{
+          fontFamily: "'Inter', sans-serif",
+          fontSize: 14, fontWeight: 700, flex: 1, color: '#1a2236',
+        }}>
+          {category.name}
+        </span>
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 999,
+          background: STATUS_BG[derivedLight],
+          color: STATUS_TEXT[derivedLight],
+          border: `1px solid ${derivedLight === 'gray' ? '#e2e3f0' : STATUS_COLORS[derivedLight] + '40'}`,
+        }}>
+          {LIGHT_LABEL[derivedLight]}
+        </span>
       </div>
 
       {/* Body */}
-      <div style={S.body}>
+      <div style={{ padding: '12px 18px' }}>
         {category.sub_items.length === 0
-          ? <div style={S.empty}>세부 항목을 추가하세요.</div>
+          ? <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: '10px 0' }}>
+              세부 항목을 추가하세요.
+            </div>
           : category.sub_items.map(item => (
               <SubItemRow
                 key={item.id}
@@ -86,15 +133,21 @@ export default function CategoryCard({ category, onUpdate }: Props) {
         }
 
         {/* Add row */}
-        <div style={S.addRow}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <input
             value={addTitle}
             onChange={e => setAddTitle(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addItem()}
             placeholder="세부 항목명 입력..."
-            style={S.addInp}
+            style={{
+              flex: 1, padding: '7px 10px', border: '1px dashed #c0d0e0', borderRadius: 6,
+              fontSize: 12, color: '#334155', outline: 'none', background: '#fafbfc',
+            }}
           />
-          <button onClick={addItem} disabled={busy} style={S.addBtn}>+</button>
+          <button onClick={addItem} disabled={busy} style={{
+            padding: '7px 12px', background: '#e8f0fe', border: 'none', borderRadius: 6,
+            color: '#0051d5', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+          }}>+</button>
         </div>
       </div>
     </div>
@@ -127,95 +180,68 @@ function SubItemRow({
   }
 
   return (
-    <div style={SR.wrap}>
+    <div style={{
+      borderBottom: '1px solid #f4f4f4', paddingBottom: 10, marginBottom: 10,
+    }}>
       {/* 항목명 + 신호등 선택 */}
-      <div style={SR.top}>
-        <span style={SR.title}>{item.title}</span>
-        <div style={SR.lights}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1a2236', flex: 1 }}>{item.title}</span>
+        {/* 신호등 4색 선택 */}
+        <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
           {LIGHTS.map(l => (
             <button
               key={l}
               title={LIGHT_LABEL[l]}
               onClick={() => onLightChange(item.id, l)}
               style={{
-                ...SR.lightBtn,
-                background: LIGHT_DOT[l],
-                opacity: item.light === l ? 1 : 0.25,
-                transform: item.light === l ? 'scale(1.3)' : 'scale(1)',
+                width: 14, height: 14, borderRadius: '50%',
+                background: STATUS_COLORS[l],
+                border: item.light === l ? `2px solid #1a2236` : '2px solid transparent',
+                cursor: 'pointer', padding: 0,
+                opacity: item.light === l ? 1 : 0.3,
+                transform: item.light === l ? 'scale(1.25)' : 'scale(1)',
+                transition: 'opacity .15s, transform .15s',
               }}
             />
           ))}
         </div>
-        <button style={SR.delBtn} onClick={() => onDelete(item.id)} title="삭제">×</button>
+        <button
+          onClick={() => onDelete(item.id)}
+          style={{ background: 'none', border: 'none', color: '#c6c6cd', cursor: 'pointer', fontSize: 18, padding: '0 2px', lineHeight: 1 }}
+        >
+          ×
+        </button>
       </div>
 
       {/* 세부내용 + 저장 */}
-      <div style={SR.detailRow}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
         <textarea
           value={detail}
           onChange={e => setDetail(e.target.value)}
           placeholder="세부 내용을 입력하세요..."
-          style={SR.textarea}
           rows={2}
+          style={{
+            flex: 1, fontSize: 12, color: '#334155',
+            border: '1px solid #e2e3f0', borderRadius: 6,
+            padding: '6px 8px', resize: 'none',
+            fontFamily: 'Inter, sans-serif', outline: 'none',
+            background: '#fafbfc',
+          }}
         />
         <button
           onClick={save}
           disabled={saving}
           style={{
-            ...SR.saveBtn,
-            background: saved ? '#43a047' : '#2563eb',
+            padding: '7px 14px', border: 'none', borderRadius: 6,
+            background: saved ? '#10b981' : '#0051d5',
+            color: '#fff', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', whiteSpace: 'nowrap',
+            transition: 'background .3s',
           }}
         >
-          {saving ? '...' : saved ? '완료' : '저장'}
+          {saving ? '...' : saved ? '완료 ✓' : '저장'}
         </button>
       </div>
     </div>
   )
-}
-
-const S: Record<string, React.CSSProperties> = {
-  card: { background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(0,0,0,.07)', overflow: 'hidden' },
-  header: {
-    display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px',
-    borderBottom: '1px solid #f0f0f0',
-  },
-  dot: { width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: '2px solid rgba(0,0,0,.08)', transition: 'background .3s' },
-  title: { fontSize: 15, fontWeight: 700, flex: 1 },
-  hint: { fontSize: 10, color: '#bbb' },
-  body: { padding: '12px 16px' },
-  empty: { color: '#bbb', fontSize: 13, textAlign: 'center', padding: '12px 0' },
-  addRow: { display: 'flex', gap: 8, marginTop: 10 },
-  addInp: {
-    flex: 1, padding: '6px 9px', border: '1px dashed #c0d0e0', borderRadius: 5,
-    fontSize: 12, color: '#333', outline: 'none',
-  },
-  addBtn: {
-    padding: '6px 10px', background: '#e8f0fe', border: 'none', borderRadius: 5,
-    color: '#2563eb', fontSize: 18, fontWeight: 700, cursor: 'pointer',
-  },
-}
-
-const SR: Record<string, React.CSSProperties> = {
-  wrap: {
-    borderBottom: '1px solid #f4f4f4', paddingBottom: 10, marginBottom: 10,
-  },
-  top: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 },
-  title: { fontSize: 13, fontWeight: 600, color: '#333', flex: 1 },
-  lights: { display: 'flex', gap: 5, alignItems: 'center' },
-  lightBtn: {
-    width: 14, height: 14, borderRadius: '50%', border: 'none', cursor: 'pointer',
-    padding: 0, transition: 'opacity .15s, transform .15s',
-  },
-  delBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 18, padding: '0 2px', lineHeight: 1 },
-  detailRow: { display: 'flex', gap: 8, alignItems: 'flex-end' },
-  textarea: {
-    flex: 1, fontSize: 12, color: '#444', border: '1px solid #d0d8e8', borderRadius: 4,
-    padding: '5px 7px', resize: 'none' as const,
-    fontFamily: 'inherit', outline: 'none',
-  },
-  saveBtn: {
-    padding: '6px 12px', border: 'none', borderRadius: 5,
-    color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-    whiteSpace: 'nowrap' as const, transition: 'background .3s',
-  },
 }

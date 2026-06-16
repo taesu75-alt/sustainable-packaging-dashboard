@@ -84,15 +84,23 @@ function Welcome() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', height: '70vh', color: '#8a9ab0', textAlign: 'center',
+      justifyContent: 'center', height: '70vh', textAlign: 'center',
     }}>
-      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" style={{ opacity: .3, marginBottom: 16 }}>
-        <rect x="8" y="16" width="48" height="36" rx="4" stroke="#8a9ab0" strokeWidth="3"/>
-        <path d="M20 28h24M20 36h16" stroke="#8a9ab0" strokeWidth="3" strokeLinecap="round"/>
-      </svg>
-      <h2 style={{ fontSize: 18, fontWeight: 600, color: '#b0bac8' }}>리드를 선택하거나 등록하세요</h2>
-      <p style={{ fontSize: 13, marginTop: 6 }}>
-        왼쪽 패널에서 신규 리드를 등록하거나 기존 리드를 클릭하면<br/>스냅샷 대시보드가 표시됩니다.
+      <div style={{
+        width: 72, height: 72, borderRadius: 20, background: '#eceef0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        marginBottom: 20,
+      }}>
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#76777d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M12 12v4M10 14h4"/>
+        </svg>
+      </div>
+      <h2 style={{ fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 18, fontWeight: 800, color: '#45464d' }}>
+        리드를 선택하거나 등록하세요
+      </h2>
+      <p style={{ fontSize: 13, marginTop: 8, color: '#76777d', lineHeight: 1.6 }}>
+        왼쪽 상단 타이틀을 클릭하면 전체 리드 목록을 볼 수 있습니다.<br/>
+        신규 리드를 등록하거나 검색으로 리드를 찾아보세요.
       </p>
     </div>
   )
