@@ -32,7 +32,9 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
     setBusy(false)
   }
 
-  const filtered = leads.filter(l => {
+  const hasSearch = searchCompany.trim() || searchProduct.trim() || searchRep.trim()
+
+  const filtered = !hasSearch ? [] : leads.filter(l => {
     const sc = searchCompany.trim().toLowerCase()
     const sp = searchProduct.trim().toLowerCase()
     const sr = searchRep.trim().toLowerCase()
@@ -47,7 +49,7 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
     <aside style={S.sidebar}>
       {/* Header */}
       <div style={S.sidebarHeader}>
-        <div style={{ fontSize: 17, color: '#fff', fontWeight: 700 }}>영업 파이프라인</div>
+        <div style={{ fontSize: 17, color: '#fff', fontWeight: 700 }}>친환경 패키징 리드 대시보드</div>
         <div style={{ fontSize: 12, color: '#7a8aa0', marginTop: 3 }}>Lead Management Dashboard</div>
       </div>
 
@@ -73,8 +75,9 @@ export default function Sidebar({ leads, activeId, loading, onSelect, onRegister
 
       {/* List */}
       <div style={S.list}>
-        {loading && <div style={S.hint}>불러오는 중...</div>}
-        {!loading && filtered.length === 0 && <div style={S.hint}>리드가 없습니다.</div>}
+        {!hasSearch && <div style={S.hint}>검색어를 입력하면 리드가 표시됩니다.</div>}
+        {hasSearch && loading && <div style={S.hint}>불러오는 중...</div>}
+        {hasSearch && !loading && filtered.length === 0 && <div style={S.hint}>검색 결과가 없습니다.</div>}
         {filtered.map(l => (
           <div
             key={l.id}
