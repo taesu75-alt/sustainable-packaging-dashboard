@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영업 파이프라인 대시보드</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; color: #222; }
+
+  /* ─── LAYOUT ─── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar {
+    width: 300px; min-width: 300px; background: #1a2236; color: #cdd5e0;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .main { flex: 1; overflow-y: auto; padding: 28px; }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar-header {
+    padding: 22px 20px 16px; border-bottom: 1px solid #2d3a50;
+  }
+  .sidebar-header h1 { font-size: 17px; color: #fff; font-weight: 700; letter-spacing: -0.3px; }
+  .sidebar-header p { font-size: 12px; color: #7a8aa0; margin-top: 3px; }
+
+  .sidebar-stats {
+    padding: 16px 20px; border-bottom: 1px solid #2d3a50;
+    display: flex; gap: 10px;
+  }
+  .stat-box {
+    flex: 1; background: #242f45; border-radius: 8px; padding: 10px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 22px; font-weight: 700; color: #fff; }
+  .stat-box .lbl { font-size: 11px; color: #7a8aa0; margin-top: 2px; }
+
+  /* register form */
+  .register-area { padding: 16px 20px; border-bottom: 1px solid #2d3a50; }
+  .register-area h2 { font-size: 13px; font-weight: 600; color: #a0afbf; margin-bottom: 12px; }
+  .register-area input, .register-area select {
+    width: 100%; padding: 8px 10px; margin-bottom: 8px;
+    background: #242f45; border: 1px solid #3a4a60; border-radius: 6px;
+    color: #e0e8f0; font-size: 13px; outline: none;
+  }
+  .register-area input::placeholder { color: #5a6a80; }
+  .register-area input:focus, .register-area select:focus { border-color: #4a90d9; }
+  .btn-register {
+    width: 100%; padding: 9px; background: #2563eb; color: #fff;
+    border: none; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+  }
+  .btn-register:hover { background: #1d4ed8; }
+
+  /* lead list */
+  .lead-list { flex: 1; overflow-y: auto; padding: 12px 0; }
+  .lead-item {
+    padding: 10px 20px; cursor: pointer; border-left: 3px solid transparent;
+    transition: background .12s;
+  }
+  .lead-item:hover { background: #242f45; }
+  .lead-item.active { background: #1e3a6e; border-left-color: #4a90d9; }
+  .lead-item .company { font-size: 14px; color: #e0e8f0; font-weight: 600; }
+  .lead-item .meta { font-size: 11px; color: #7a8aa0; margin-top: 2px; }
+  .lead-lights { display: flex; gap: 3px; margin-top: 5px; }
+  .lead-light {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+
+  /* ─── MAIN ─── */
+  .welcome {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; height: 70vh; color: #8a9ab0; text-align: center;
+  }
+  .welcome svg { opacity: .3; margin-bottom: 16px; }
+  .welcome h2 { font-size: 18px; font-weight: 600; color: #b0bac8; }
+  .welcome p { font-size: 13px; margin-top: 6px; }
+
+  .snapshot-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .snapshot-header .info h2 { font-size: 22px; font-weight: 700; color: #1a2236; }
+  .snapshot-header .info .badges { display: flex; gap: 8px; margin-top: 6px; }
+  .badge {
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    background: #e0e8f8; color: #2563eb;
+  }
+  .badge.rep { background: #e8f5e9; color: #2e7d32; }
+
+  .btn-delete {
+    padding: 7px 16px; background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 6px; font-size: 13px; color: #c0392b; cursor: pointer;
+    transition: background .12s;
+  }
+  .btn-delete:hover { background: #ffeef0; }
+
+  /* ─── GRID ─── */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .card {
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer;
+    user-select: none;
+  }
+  .card-header:hover { background: #fafafa; }
+  .traffic-dot {
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    transition: background .2s; border: 2px solid rgba(0,0,0,.08);
+  }
+  .dot-gray   { background: #b0b8c4; }
+  .dot-red    { background: #e53935; }
+  .dot-yellow { background: #f9a825; }
+  .dot-green  { background: #43a047; }
+
+  .card-title { font-size: 15px; font-weight: 700; flex: 1; }
+  .card-toggle-hint { font-size: 10px; color: #bbb; }
+
+  .card-body { padding: 12px 16px; }
+
+  .sub-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid #f4f4f4; position: relative;
+  }
+  .sub-item:last-child { border-bottom: none; }
+  .sub-title {
+    font-size: 13px; font-weight: 600; color: #333; min-width: 70px;
+  }
+  .sub-detail {
+    font-size: 12px; color: #666; flex: 1; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .sub-detail-input {
+    font-size: 12px; color: #444; flex: 1; border: 1px solid #d0d8e8;
+    border-radius: 4px; padding: 4px 6px; resize: none; min-height: 36px;
+    font-family: inherit; outline: none;
+  }
+  .sub-detail-input:focus { border-color: #4a90d9; }
+  .btn-sub-del {
+    background: none; border: none; color: #ccc; cursor: pointer;
+    font-size: 16px; padding: 0 4px; line-height: 1;
+  }
+  .btn-sub-del:hover { color: #e53935; }
+
+  /* add sub item row */
+  .add-row {
+    display: flex; gap: 8px; margin-top: 10px;
+  }
+  .add-row input {
+    flex: 1; padding: 6px 9px; border: 1px dashed #c0d0e0; border-radius: 5px;
+    font-size: 12px; color: #333; outline: none;
+  }
+  .add-row input:focus { border-color: #4a90d9; border-style: solid; }
+  .btn-add-sub {
+    padding: 6px 10px; background: #e8f0fe; border: none; border-radius: 5px;
+    color: #2563eb; font-size: 18px; font-weight: 700; cursor: pointer; line-height: 1;
+  }
+  .btn-add-sub:hover { background: #c8dcfd; }
+
+  /* scrollbar */
+  .lead-list::-webkit-scrollbar { width: 4px; }
+  .lead-list::-webkit-scrollbar-track { background: transparent; }
+  .lead-list::-webkit-scrollbar-thumb { background: #3a4a60; border-radius: 2px; }
+
+  .empty-card {
+    padding: 18px 16px; color: #bbb; font-size: 13px; text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>영업 파이프라인</h1>
+      <p>Lead Management Dashboard</p>
+    </div>
+
+    <div class="sidebar-stats">
+      <div class="stat-box">
+        <div class="num" id="totalCount">0</div>
+        <div class="lbl">전체 리드</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="greenCount">0</div>
+        <div class="lbl">진행중(초록)</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="redCount">0</div>
+        <div class="lbl">이슈(빨강)</div>
+      </div>
+    </div>
+
+    <div class="register-area">
+      <h2>신규 리드 등록</h2>
+      <input id="inp-company"  type="text"  placeholder="고객사명" />
+      <input id="inp-product"  type="text"  placeholder="대상 제품" />
+      <input id="inp-rep"      type="text"  placeholder="영업담당자" />
+      <button class="btn-register" onclick="registerLead()">+ 리드 등록</button>
+    </div>
+
+    <div class="lead-list" id="leadList"></div>
+  </aside>
+
+  <!-- ─── MAIN ─── -->
+  <main class="main" id="mainArea">
+    <div class="welcome">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <rect x="8" y="16" width="48" height="36" rx="4" stroke="#8a9ab0" stroke-width="3"/>
+        <path d="M20 28h24M20 36h16" stroke="#8a9ab0" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <h2>리드를 선택하거나 등록하세요</h2>
+      <p>왼쪽 패널에서 신규 리드를 등록하거나 기존 리드를 클릭하면<br>스냅샷 대시보드가 표시됩니다.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────
+const CATEGORIES = [
+  '포장개발', '공장', '영업', '마케팅',
+  '디자인', '구매', '경영진 승인', '외부고객 협의'
+];
+const LIGHTS = ['gray', 'red', 'yellow', 'green'];
+const LIGHT_LABEL = { gray: '미확인', red: '이슈', yellow: '진행', green: '완료' };
+const DOT_CLASS = { gray: 'dot-gray', red: 'dot-red', yellow: 'dot-yellow', green: 'dot-green' };
+
+// ── STATE ───────────────────────────────────────────────────
+let leads = JSON.parse(localStorage.getItem('leads') || '[]');
+let activeLead = null;
+
+// ── SAVE ────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('leads', JSON.stringify(leads));
+}
+
+// ── REGISTER ────────────────────────────────────────────────
+function registerLead() {
+  const company = document.getElementById('inp-company').value.trim();
+  const product  = document.getElementById('inp-product').value.trim();
+  const rep      = document.getElementById('inp-rep').value.trim();
+  if (!company || !product || !rep) { alert('고객사, 대상제품, 영업담당자를 모두 입력해 주세요.'); return; }
+
+  const lead = {
+    id: Date.now().toString(),
+    company, product, rep,
+    createdAt: new Date().toLocaleDateString('ko-KR'),
+    categories: CATEGORIES.map(name => ({
+      name,
+      light: 'gray',   // gray / red / yellow / green
+      items: []        // { id, title, detail }
+    }))
+  };
+  leads.unshift(lead);
+  save();
+  document.getElementById('inp-company').value = '';
+  document.getElementById('inp-product').value = '';
+  document.getElementById('inp-rep').value = '';
+  renderSidebar();
+  openLead(lead.id);
+}
+
+// ── DELETE ──────────────────────────────────────────────────
+function deleteLead(id) {
+  if (!confirm('이 리드를 삭제하시겠습니까?')) return;
+  leads = leads.filter(l => l.id !== id);
+  save();
+  activeLead = null;
+  renderSidebar();
+  renderMain(null);
+}
+
+// ── TOGGLE LIGHT ────────────────────────────────────────────
+function toggleLight(leadId, catIndex) {
+  const lead = leads.find(l => l.id === leadId);
+  if (!lead) return;
+  const cur = LIGHTS.indexOf(lead.categories[catIndex].light);
+  lead.categories[catIndex].light = LIGHTS[(cur + 1) % LIGHTS.length];
+  save();
+  renderSidebar();
+  // update card header only
+  const dot = document.getElementById(`dot-${leadId}-${catIndex}`);
+  const lbl = document.getElementById(`lbl-${leadId}-${catIndex}`);
+  if (dot) {
+    dot.className = 'traffic-dot ' + DOT_CLASS[lead.categories[catIndex].light];
+  }
+  if (lbl) lbl.textContent = LIGHT_LABEL[lead.categories[catIndex].light];
+}
+
+// ── ADD SUB-ITEM ─────────────────────────────────────────────
+function addSubItem(leadId, catIndex) {
+  const inp = document.getElementById(`add-inp-${leadId}-${catIndex}`);
+  const title = inp.value.trim();
+  if (!title) return;
+  const lead = leads.find(l => l.id === leadId);
+  lead.categories[catIndex].items.push({
+    id: Date.now().toString(),
+    title,
+    detail: ''
+  });
+  save();
+  inp.value = '';
+  renderCard(leadId, catIndex);
+}
+
+// ── DELETE SUB-ITEM ──────────────────────────────────────────
+function deleteSubItem(leadId, catIndex, itemId) {
+  const lead = leads.find(l => l.id === leadId);
+  lead.categories[catIndex].items = lead.categories[catIndex].items.filter(i => i.id !== itemId);
+  save();
+  renderCard(leadId, catIndex);
+}
+
+// ── UPDATE DETAIL ────────────────────────────────────────────
+function updateDetail(leadId, catIndex, itemId, value) {
+  const lead = leads.find(l => l.id === leadId);
+  const item = lead.categories[catIndex].items.find(i => i.id === itemId);
+  if (item) item.detail = value;
+  save();
+}
+
+// ── RENDER SIDEBAR ───────────────────────────────────────────
+function renderSidebar() {
+  document.getElementById('totalCount').textContent = leads.length;
+  const green = leads.filter(l => l.categories.some(c => c.light === 'green')).length;
+  const red   = leads.filter(l => l.categories.some(c => c.light === 'red')).length;
+  document.getElementById('greenCount').textContent = green;
+  document.getElementById('redCount').textContent   = red;
+
+  const list = document.getElementById('leadList');
+  if (leads.length === 0) {
+    list.innerHTML = '<div style="padding:20px;color:#5a6a80;font-size:13px;text-align:center">등록된 리드가 없습니다.</div>';
+    return;
+  }
+  list.innerHTML = leads.map(l => {
+    const isActive = activeLead && activeLead.id === l.id;
+    const dots = l.categories.map(c =>
+      `<span class="lead-light ${DOT_CLASS[c.light]}"></span>`
+    ).join('');
+    return `
+      <div class="lead-item${isActive ? ' active' : ''}" onclick="openLead('${l.id}')">
+        <div class="company">${esc(l.company)}</div>
+        <div class="meta">${esc(l.product)} · ${esc(l.rep)}</div>
+        <div class="lead-lights">${dots}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── RENDER CARD (single) ─────────────────────────────────────
+function renderCard(leadId, catIndex) {
+  const lead = leads.find(l => l.id === leadId);
+  if (!lead) return;
+  const cat = lead.categories[catIndex];
+  const el  = document.getElementById(`card-body-${leadId}-${catIndex}`);
+  if (!el) return;
+
+  const itemsHtml = cat.items.length === 0
+    ? `<div class="empty-card">세부 항목이 없습니다.<br>아래에서 추가하세요.</div>`
+    : cat.items.map(item => `
+        <div class="sub-item">
+          <span class="sub-title">${esc(item.title)}</span>
+          <textarea class="sub-detail-input"
+            oninput="updateDetail('${leadId}',${catIndex},'${item.id}',this.value)"
+            placeholder="세부 내용을 입력하세요...">${esc(item.detail)}</textarea>
+          <button class="btn-sub-del" onclick="deleteSubItem('${leadId}',${catIndex},'${item.id}')" title="삭제">×</button>
+        </div>`).join('');
+
+  el.innerHTML = `
+    ${itemsHtml}
+    <div class="add-row">
+      <input id="add-inp-${leadId}-${catIndex}" type="text" placeholder="세부 항목명 입력..."
+        onkeydown="if(event.key==='Enter')addSubItem('${leadId}',${catIndex})"/>
+      <button class="btn-add-sub" onclick="addSubItem('${leadId}',${catIndex})">+</button>
+    </div>`;
+}
+
+// ── RENDER MAIN ──────────────────────────────────────────────
+function renderMain(lead) {
+  const area = document.getElementById('mainArea');
+  if (!lead) {
+    area.innerHTML = `
+      <div class="welcome">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+          <rect x="8" y="16" width="48" height="36" rx="4" stroke="#8a9ab0" stroke-width="3"/>
+          <path d="M20 28h24M20 36h16" stroke="#8a9ab0" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <h2>리드를 선택하거나 등록하세요</h2>
+        <p>왼쪽 패널에서 신규 리드를 등록하거나 기존 리드를 클릭하면<br>스냅샷 대시보드가 표시됩니다.</p>
+      </div>`;
+    return;
+  }
+
+  const gridCards = lead.categories.map((cat, i) => `
+    <div class="card" id="card-${lead.id}-${i}">
+      <div class="card-header" onclick="toggleLight('${lead.id}',${i})" title="클릭하여 상태 변경">
+        <span class="traffic-dot ${DOT_CLASS[cat.light]}" id="dot-${lead.id}-${i}"></span>
+        <span class="card-title">${esc(cat.name)}</span>
+        <span class="card-toggle-hint" id="lbl-${lead.id}-${i}">${LIGHT_LABEL[cat.light]}</span>
+      </div>
+      <div class="card-body" id="card-body-${lead.id}-${i}"></div>
+    </div>`).join('');
+
+  area.innerHTML = `
+    <div class="snapshot-header">
+      <div class="info">
+        <h2>${esc(lead.company)}</h2>
+        <div class="badges">
+          <span class="badge">${esc(lead.product)}</span>
+          <span class="badge rep">${esc(lead.rep)}</span>
+          <span class="badge" style="background:#f5f5f5;color:#888">${lead.createdAt}</span>
+        </div>
+      </div>
+      <button class="btn-delete" onclick="deleteLead('${lead.id}')">삭제</button>
+    </div>
+    <div class="grid">${gridCards}</div>`;
+
+  // fill card bodies
+  lead.categories.forEach((_, i) => renderCard(lead.id, i));
+}
+
+// ── OPEN LEAD ────────────────────────────────────────────────
+function openLead(id) {
+  activeLead = leads.find(l => l.id === id) || null;
+  renderSidebar();
+  renderMain(activeLead);
+}
+
+// ── ESCAPE HTML ──────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+renderSidebar();
+</script>
+</body>
+</html>
