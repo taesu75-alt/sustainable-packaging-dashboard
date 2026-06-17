@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-const CATEGORIES = [
-  '포장개발', '공장', '영업', '마케팅',
-  '디자인', '구매', '경영진 승인', '외부고객 협의',
+const CATEGORIES: { name: string; items: string[] }[] = [
+  { name: '포장개발',    items: ['기존재질 / 신규재질', '연포장사 선정'] },
+  { name: '공장/품질',   items: ['충전평가'] },
+  { name: '영업',        items: [] },
+  { name: '마케팅',      items: ['상품성 확인'] },
+  { name: '디자인',      items: [] },
+  { name: '구매',        items: ['기존단가/타겟단가 확인', '단가승인'] },
+  { name: '경영진 승인', items: [] },
+  { name: '외부고객 협의', items: [] },
 ]
 
 export async function GET() {
@@ -48,8 +54,8 @@ export async function POST(req: Request) {
 
   if (leadErr) return NextResponse.json({ error: leadErr.message }, { status: 500 })
 
-  // 2. 8개 카테고리 생성
-  const cats = CATEGORIES.map((name, i) => ({
+  // 2. 카테고리 생성
+  const cats = CATEGORIES.map(({ name }, i) => ({
     lead_id: lead.id,
     name,
     light: 'gray',
@@ -62,8 +68,32 @@ export async function POST(req: Request) {
 
   if (catErr) return NextResponse.json({ error: catErr.message }, { status: 500 })
 
+  // 3. 기본 세부항목 생성
+  const defaultItems = categories.flatMap((cat: any) => {
+    const template = CATEGORIES.find(c => c.name === cat.name)
+    return (template?.items ?? []).map((title: string) => ({
+      category_id: cat.id,
+      title,
+      detail: '',
+      light: 'gray',
+    }))
+  })
+
+  let subItems: any[] = []
+  if (defaultItems.length > 0) {
+    const { data: si, error: siErr } = await supabase
+      .from('sub_items')
+      .insert(defaultItems)
+      .select()
+    if (siErr) return NextResponse.json({ error: siErr.message }, { status: 500 })
+    subItems = si
+  }
+
   return NextResponse.json({
     ...lead,
-    lead_categories: categories.map((c: any) => ({ ...c, sub_items: [] })),
+    lead_categories: categories.map((c: any) => ({
+      ...c,
+      sub_items: subItems.filter((s: any) => s.category_id === c.id),
+    })),
   })
 }
