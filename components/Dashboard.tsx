@@ -71,27 +71,6 @@ export default function Dashboard() {
               {activeLead ? 'Lead Detail View' : '전체 리드'}
             </span>
             </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ position: 'relative' }}>
-              <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input placeholder="Search pipeline..." style={{
-                padding: '7px 14px 7px 32px', background: '#eceef0', border: 'none',
-                borderRadius: 999, fontSize: 12, color: '#334155', outline: 'none', width: 200,
-              }} />
-            </div>
-            {[
-              <svg key="bell" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#76777d" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
-              <svg key="hist" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#76777d" strokeWidth="2" strokeLinecap="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>,
-              <svg key="more" width="18" height="18" viewBox="0 0 24 24" fill="#76777d"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>,
-            ].map((icon, i) => (
-              <button key={i} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 999, display: 'flex', alignItems: 'center' }}>
-                {icon}
-              </button>
-            ))}
-          </div>
         </header>
 
         {/* Main content */}
