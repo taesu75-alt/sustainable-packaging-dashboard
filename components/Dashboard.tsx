@@ -12,7 +12,6 @@ export default function Dashboard() {
   const [showHome,   setShowHome]   = useState(false)
   const [showModal,  setShowModal]  = useState(false)
   const [loading,    setLoading]    = useState(true)
-  const [activeTab,  setActiveTab]  = useState<'overview'|'timeline'|'files'>('overview')
 
   const activeLead = leads.find(l => l.id === activeId) ?? null
 
@@ -46,8 +45,8 @@ export default function Dashboard() {
     setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))
   }
 
-  function handleHome() { setActiveId(null); setShowHome(true); setActiveTab('overview') }
-  function handleSelect(id: string) { setActiveId(id); setShowHome(false); setActiveTab('overview') }
+  function handleHome() { setActiveId(null); setShowHome(true) }
+  function handleSelect(id: string) { setActiveId(id); setShowHome(false) }
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -71,25 +70,7 @@ export default function Dashboard() {
             <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: '#1a2236' }}>
               {activeLead ? 'Lead Detail View' : '전체 리드'}
             </span>
-            {activeLead && (
-              <>
-                <div style={{ width: 1, height: 20, background: '#e2e3f0' }} />
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {(['overview','timeline','files'] as const).map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                      padding: '4px 12px', background: 'none', border: 'none',
-                      fontSize: 13, fontWeight: activeTab === tab ? 700 : 500,
-                      color: activeTab === tab ? '#0051d5' : '#76777d',
-                      borderBottom: activeTab === tab ? '2px solid #0051d5' : '2px solid transparent',
-                      cursor: 'pointer', textTransform: 'capitalize',
-                    }}>
-                      {tab === 'overview' ? 'Overview' : tab === 'timeline' ? 'Timeline' : 'Files'}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+            </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ position: 'relative' }}>
               <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
@@ -116,7 +97,7 @@ export default function Dashboard() {
         {/* Main content */}
         <main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
           {activeLead
-            ? <LeadSnapshot lead={activeLead} onDelete={deleteLead} onUpdate={updateLeadLocally} activeTab={activeTab} />
+            ? <LeadSnapshot lead={activeLead} onDelete={deleteLead} onUpdate={updateLeadLocally} />
             : showHome
             ? <LeadList leads={leads} onSelect={handleSelect} />
             : <Welcome onStart={handleHome} />
