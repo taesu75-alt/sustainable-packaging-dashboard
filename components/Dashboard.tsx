@@ -4,12 +4,15 @@ import type { Lead } from '@/lib/supabase'
 import Sidebar from './Sidebar'
 import LeadSnapshot from './LeadSnapshot'
 import LeadList from './LeadList'
+import RegisterModal from './RegisterModal'
 
 export default function Dashboard() {
-  const [leads, setLeads]       = useState<Lead[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [showHome, setShowHome] = useState(false)
-  const [loading, setLoading]   = useState(true)
+  const [leads,      setLeads]      = useState<Lead[]>([])
+  const [activeId,   setActiveId]   = useState<string | null>(null)
+  const [showHome,   setShowHome]   = useState(false)
+  const [showModal,  setShowModal]  = useState(false)
+  const [loading,    setLoading]    = useState(true)
+  const [activeTab,  setActiveTab]  = useState<'overview'|'timeline'|'files'>('overview')
 
   const activeLead = leads.find(l => l.id === activeId) ?? null
 
@@ -18,7 +21,6 @@ export default function Dashboard() {
     if (res.ok) setLeads(await res.json())
     setLoading(false)
   }, [])
-
   useEffect(() => { fetchLeads() }, [fetchLeads])
 
   async function registerLead(company: string, product: string, rep: string) {
@@ -27,81 +29,126 @@ export default function Dashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ company, product, rep }),
     })
-    if (!res.ok) return alert('등록 실패')
+    if (!res.ok) { alert('등록 실패'); return }
     const newLead: Lead = await res.json()
     setLeads(prev => [newLead, ...prev])
     setActiveId(newLead.id)
+    setShowHome(false)
   }
 
   async function deleteLead(id: string) {
-    if (!confirm('이 리드를 삭제하시겠습니까?')) return
     await fetch(`/api/leads/${id}`, { method: 'DELETE' })
     setLeads(prev => prev.filter(l => l.id !== id))
-    if (activeId === id) { setActiveId(null); setShowHome(true) }
-  }
-
-  function handleHome() {
-    setActiveId(null)
-    setShowHome(true)
-  }
-
-  function handleSelect(id: string) {
-    setActiveId(id)
-    setShowHome(false)
+    setActiveId(null); setShowHome(true)
   }
 
   function updateLeadLocally(updated: Lead) {
     setLeads(prev => prev.map(l => l.id === updated.id ? updated : l))
   }
 
+  function handleHome() { setActiveId(null); setShowHome(true); setActiveTab('overview') }
+  function handleSelect(id: string) { setActiveId(id); setShowHome(false); setActiveTab('overview') }
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar
         leads={leads}
         activeId={activeId}
-        loading={loading}
         onSelect={handleSelect}
         onHome={handleHome}
-        onRegister={registerLead}
+        onNewLead={() => setShowModal(true)}
       />
-      <main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
-        {activeLead
-          ? <LeadSnapshot
-              lead={activeLead}
-              onDelete={deleteLead}
-              onUpdate={updateLeadLocally}
-            />
-          : showHome
-          ? <LeadList leads={leads} onSelect={handleSelect} />
-          : <Welcome />
-        }
-      </main>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Top bar */}
+        <header style={{
+          height: 56, display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', padding: '0 28px',
+          background: '#f7f9fb', borderBottom: '1px solid #e2e3f0',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 15, fontWeight: 700, color: '#1a2236' }}>
+              {activeLead ? 'Lead Detail View' : '전체 리드'}
+            </span>
+            {activeLead && (
+              <>
+                <div style={{ width: 1, height: 20, background: '#e2e3f0' }} />
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {(['overview','timeline','files'] as const).map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                      padding: '4px 12px', background: 'none', border: 'none',
+                      fontSize: 13, fontWeight: activeTab === tab ? 700 : 500,
+                      color: activeTab === tab ? '#0051d5' : '#76777d',
+                      borderBottom: activeTab === tab ? '2px solid #0051d5' : '2px solid transparent',
+                      cursor: 'pointer', textTransform: 'capitalize',
+                    }}>
+                      {tab === 'overview' ? 'Overview' : tab === 'timeline' ? 'Timeline' : 'Files'}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ position: 'relative' }}>
+              <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input placeholder="Search pipeline..." style={{
+                padding: '7px 14px 7px 32px', background: '#eceef0', border: 'none',
+                borderRadius: 999, fontSize: 12, color: '#334155', outline: 'none', width: 200,
+              }} />
+            </div>
+            {[
+              <svg key="bell" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#76777d" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+              <svg key="hist" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#76777d" strokeWidth="2" strokeLinecap="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>,
+              <svg key="more" width="18" height="18" viewBox="0 0 24 24" fill="#76777d"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>,
+            ].map((icon, i) => (
+              <button key={i} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 999, display: 'flex', alignItems: 'center' }}>
+                {icon}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main style={{ flex: 1, overflowY: 'auto', padding: 28 }}>
+          {activeLead
+            ? <LeadSnapshot lead={activeLead} onDelete={deleteLead} onUpdate={updateLeadLocally} activeTab={activeTab} />
+            : showHome
+            ? <LeadList leads={leads} onSelect={handleSelect} />
+            : <Welcome onStart={handleHome} />
+          }
+        </main>
+      </div>
+
+      {showModal && (
+        <RegisterModal onClose={() => setShowModal(false)} onRegister={registerLead} />
+      )}
     </div>
   )
 }
 
-function Welcome() {
+function Welcome({ onStart }: { onStart: () => void }) {
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', height: '70vh', textAlign: 'center',
-    }}>
-      <div style={{
-        width: 72, height: 72, borderRadius: 20, background: '#eceef0',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 20,
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '70vh', textAlign: 'center' }}>
+      <div style={{ width: 72, height: 72, borderRadius: 20, background: '#eceef0', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#76777d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M12 12v4M10 14h4"/>
         </svg>
       </div>
       <h2 style={{ fontFamily: "'Hanken Grotesk', sans-serif", fontSize: 18, fontWeight: 800, color: '#45464d' }}>
-        리드를 선택하거나 등록하세요
+        파이프라인을 시작하세요
       </h2>
-      <p style={{ fontSize: 13, marginTop: 8, color: '#76777d', lineHeight: 1.6 }}>
-        왼쪽 상단 타이틀을 클릭하면 전체 리드 목록을 볼 수 있습니다.<br/>
-        신규 리드를 등록하거나 검색으로 리드를 찾아보세요.
+      <p style={{ fontSize: 13, marginTop: 8, color: '#76777d', lineHeight: 1.7 }}>
+        왼쪽 사이드바의 <strong>+ New Lead</strong> 버튼으로 신규 리드를 등록하거나<br/>
+        Pipeline 메뉴를 클릭해 전체 리드를 확인하세요.
       </p>
+      <button onClick={onStart} style={{ marginTop: 20, padding: '10px 24px', background: '#0051d5', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+        전체 리드 보기
+      </button>
     </div>
   )
 }
